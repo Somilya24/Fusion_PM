@@ -1,0 +1,92 @@
+-- placing an order
+CREATE PROCEDURE PlaceOrder-- stored procedure to place an order
+    @UserID INT,
+    @ProductID INT,
+    @AlternatePhone VARCHAR(10),
+    @AlternateAddress VARCHAR(50),
+    @Quantity INT,
+    @TotalPrice INT,
+    @DeliverySlots VARCHAR(50)
+AS
+BEGIN
+	    SET NOCOUNT ON;
+	
+	    DECLARE @OrderID INT;
+	
+	    -- Insert into Orders table
+	 INSERT INTO Orders (OrderDate, DeliveryDate, UserID, ProductID,     AlternatePhone, AlternateAddress, Quantity, TotalPrice, DeliverySlots)
+	 VALUES (GETDATE(),dateadd(GETDATE()), @UserID, @ProductID, @AlternatePhone, @AlternateAddress, @Quantity, @TotalPrice, @DeliverySlots);
+	
+	    -- Get the OrderID of the newly inserted order
+	  SET @OrderID = SCOPE_IDENTITY();
+	
+	    -- Output success message
+	 PRINT 'Order placed successfully. Order ID: ' + CAST(@OrderID AS VARCHAR(10));
+END;
+
+
+
+	--  Modifying home address
+	
+
+CREATE FUNCTION modify_ha
+(
+    @OrderIDToModify INT,
+    @NewHomeAddress VARCHAR(255)
+)
+RETURNS TABLE
+AS
+RETURN
+(
+	    SELECT OrderID=@OrderIDToModify,AlternateAddress=@NewHomeAddress
+	    FROM Orders
+	    WHERE OrderID = @OrderIDToModify-- checks orderid
+	    AND DATEDIFF(HOUR, OrderDate, GETDATE()) < 4--- 4 hr constraint
+);
+
+-- Output: The detail of the User is updated with the new value of home address
+
+-- Modifying time slot
+create function modify_ts(@OrderIDToModify INT,@NewTimeSlot VARCHAR(255))
+returns table
+as 
+return(   
+	    SELECT OrderID=@OrderIDToModify,deliveryslots=@NewTimeSlot
+	    FROM Orders
+	    WHERE OrderID = @OrderIDToModify
+	    AND DATEDIFF(HOUR, OrderDate, GETDATE()) < 4
+)
+-- Output: The detail of the order is updated with the new value of time slot
+
+-- modifying product quantity
+create function modify_q(@OrderIDToModify INT,@NewQuantity int)
+returns table
+as 
+return( 
+	    SELECT OrderID=@OrderIDToModify,quantity=@NewQuantity
+	    FROM Orders
+	    WHERE OrderID = @OrderIDToModify
+	    AND DATEDIFF(HOUR, OrderDate, GETDATE()) < 4
+        )
+
+-- Output: The detail of the order is updated with the new quantity for existing product
+
+--  Canceling an order
+CREATE PROCEDURE DeleteOrder
+    @OrderID INT
+AS
+BEGIN
+	    
+	    IF EXISTS (SELECT 1 FROM orders WHERE orderID = @orderID)
+	    BEGIN
+		        -- Delete the order
+		        DELETE FROM orders WHERE orderID = @orderID;
+		        PRINT 'order deleted successfully.';
+	    END
+	    ELSE
+	    BEGIN
+		        PRINT 'order does not exist.';
+	    END
+END;
+
+-- Output: An old order is deleted from the database
